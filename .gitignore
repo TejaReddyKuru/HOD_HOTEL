@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+*/node_modules/
+.pnp
+.pnp.js
+
+# Environment variables
+.env
+.env.*
+*.env
+backend/.env
+frontend/.env
+!.env.example
+!backend/.env.example
+
+# Production build outputs
+dist/
+build/
+*/dist/
+*/build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary and cache
+.cache/
+.parcel-cache/
+.eslintcache

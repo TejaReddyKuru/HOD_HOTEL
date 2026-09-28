@@ -1,0 +1,406 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  RECEPTION
+  CUSTOMER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum BranchStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum RoomStatus {
+  AVAILABLE
+  RESERVED
+  OCCUPIED
+  CLEANING
+  MAINTENANCE
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  UPI
+  OTHER
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum CouponStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+}
+
+model User {
+  id           String      @id @default(uuid())
+  name         String
+  email        String      @unique
+  phone        String?
+  passwordHash String
+  role         UserRole    @default(CUSTOMER)
+  branchId     String?
+  status       UserStatus  @default(ACTIVE)
+  address      String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  branch       Branch?     @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  bookings     Booking[]   @relation("CustomerBookings")
+  checkIns     Booking[]   @relation("CheckedInByStaff")
+  payments     Payment[]   @relation("StaffPayments")
+  reviews      Review[]
+  notifications Notification[]
+  invoices     Invoice[]
+
+  @@index([email])
+  @@index([role])
+  @@index([branchId])
+}
+
+model Branch {
+  id             String       @id @default(uuid())
+  name           String
+  description    String       @db.Text
+  address        String
+  city           String
+  state          String
+  country        String       @default("India")
+  pincode        String
+  phone          String
+  email          String
+  mapsUrl        String?
+  checkInTime    String       @default("14:00")
+  checkOutTime   String       @default("11:00")
+  images         String       @default("[]") @db.Text
+  featuredImage  String?
+  status         BranchStatus @default(ACTIVE)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  staff          User[]
+  rooms          Room[]
+  bookings       Booking[]
+  payments       Payment[]
+  invoices       Invoice[]
+  coupons        Coupon[]
+  reviews        Review[]
+
+  @@index([status])
+  @@index([city])
+}
+
+model RoomType {
+  id             String   @id @default(uuid())
+  name           String
+  slug           String   @unique
+  description    String   @db.Text
+  basePrice      Float
+  maxOccupancy   Int
+  bedType        String
+  amenities      String   @default("[]") @db.Text
+  images         String   @default("[]") @db.Text
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  rooms          Room[]
+}
+
+model Amenity {
+  id             String        @id @default(uuid())
+  name           String        @unique
+  icon           String
+  description    String?
+  category       String        @default("GENERAL")
+  status         String        @default("ACTIVE")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  roomAmenities  RoomAmenity[]
+}
+
+model Room {
+  id             String        @id @default(uuid())
+  branchId       String
+  roomTypeId     String
+  roomNumber     String
+  floor          Int
+  capacity       Int
+  pricePerNight  Float
+  description    String?       @db.Text
+  images         String        @default("[]") @db.Text
+  status         RoomStatus    @default(AVAILABLE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  branch         Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  roomType       RoomType      @relation(fields: [roomTypeId], references: [id], onDelete: Restrict)
+  roomAmenities  RoomAmenity[]
+  bookings       Booking[]
+  reviews        Review[]
+
+  @@unique([branchId, roomNumber])
+  @@index([branchId])
+  @@index([roomTypeId])
+  @@index([status])
+}
+
+model RoomAmenity {
+  id         String   @id @default(uuid())
+  roomId     String
+  amenityId  String
+
+  room       Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  amenity    Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, amenityId])
+  @@index([roomId])
+  @@index([amenityId])
+}
+
+model Booking {
+  id              String        @id @default(uuid())
+  bookingNumber   String        @unique
+  customerId      String
+  branchId        String
+  roomId          String
+  checkInDate     DateTime
+  checkOutDate    DateTime
+  numberOfNights  Int
+  numberOfGuests  Int
+  status          BookingStatus @default(CONFIRMED)
+  paymentStatus   PaymentStatus @default(UNPAID)
+  roomCharges     Float
+  extraCharges    Float         @default(0.0)
+  taxAmount       Float         @default(0.0)
+  discountAmount  Float         @default(0.0)
+  totalAmount     Float
+  paidAmount      Float         @default(0.0)
+  balanceAmount   Float
+  couponCode      String?
+  specialRequests String?       @db.Text
+  actualCheckIn   DateTime?
+  actualCheckOut  DateTime?
+  checkedInById   String?
+  notes           String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  customer        User          @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Restrict)
+  branch          Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  room            Room          @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  checkedInBy     User?         @relation("CheckedInByStaff", fields: [checkedInById], references: [id], onDelete: SetNull)
+  guests          BookingGuest[]
+  charges         ExtraCharge[]
+  payments        Payment[]
+  invoices        Invoice[]
+
+  @@index([customerId])
+  @@index([branchId])
+  @@index([roomId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([checkInDate, checkOutDate])
+}
+
+model BookingGuest {
+  id         String   @id @default(uuid())
+  bookingId  String
+  fullName   String
+  email      String?
+  phone      String?
+  idType     String?
+  idNumber   String?
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+}
+
+model ExtraCharge {
+  id          String   @id @default(uuid())
+  bookingId   String
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Float
+  totalAmount Float
+  addedBy     String?
+  createdAt   DateTime @default(now())
+
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  paymentNumber String        @unique
+  bookingId     String
+  branchId      String
+  amount        Float
+  paymentMethod PaymentMethod
+  status        String        @default("PAID")
+  collectedById String
+  notes         String?       @db.Text
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  booking       Booking       @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  branch        Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  collectedBy   User          @relation("StaffPayments", fields: [collectedById], references: [id], onDelete: Restrict)
+
+  @@index([bookingId])
+  @@index([branchId])
+  @@index([collectedById])
+  @@index([createdAt])
+}
+
+model Invoice {
+  id             String    @id @default(uuid())
+  invoiceNumber  String    @unique
+  bookingId      String
+  branchId       String
+  customerId     String
+  roomCharges    Float
+  extraCharges   Float     @default(0.0)
+  taxAmount      Float     @default(0.0)
+  discountAmount Float     @default(0.0)
+  totalAmount    Float
+  paidAmount     Float
+  balanceAmount  Float
+  issuedDate     DateTime  @default(now())
+  notes          String?   @db.Text
+  createdAt      DateTime  @default(now())
+
+  booking        Booking   @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  branch         Branch    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  customer       User      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  @@index([bookingId])
+  @@index([branchId])
+  @@index([customerId])
+}
+
+model Coupon {
+  id               String       @id @default(uuid())
+  code             String       @unique
+  description      String
+  discountType     DiscountType
+  discountValue    Float
+  minBookingAmount Float        @default(0.0)
+  maxDiscount      Float?
+  startDate        DateTime
+  endDate          DateTime
+  branchId         String?
+  usageLimit       Int          @default(100)
+  usedCount        Int          @default(0)
+  status           CouponStatus @default(ACTIVE)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  branch           Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([code])
+  @@index([status])
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  customerId String
+  branchId   String
+  roomId     String?
+  rating     Int
+  comment    String   @db.Text
+  isHidden   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  customer   User     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  room       Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@index([branchId])
+  @@index([customerId])
+  @@index([rating])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String?
+  branchId  String?
+  title     String
+  message   String   @db.Text
+  type      String   @default("INFO")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  userName  String?
+  role      String
+  action    String
+  entity    String
+  entityId  String?
+  branchId  String?
+  details   String?  @db.Text
+  ipAddress String?
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@index([branchId])
+  @@index([action])
+  @@index([timestamp])
+}
+
+model HotelSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String   @db.Text
+  description String?
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+}

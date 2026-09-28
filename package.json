@@ -1,0 +1,26 @@
+{
+  "name": "house-of-dreams-suite",
+  "version": "1.0.0",
+  "description": "HOUSE OF DREAMS - Full-Stack Multi-Branch Luxury Hotel Management Platform",
+  "scripts": {
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "build": "npm --prefix backend run build && npm --prefix frontend run build",
+    "db:push": "npm --prefix backend run db:push",
+    "db:seed": "npm --prefix backend run seed",
+    "db:studio": "npm --prefix backend run studio"
+  },
+  "keywords": [
+    "hotel-management",
+    "luxury-hospitality",
+    "neon-postgres",
+    "prisma",
+    "react",
+    "express"
+  ],
+  "author": "House of Dreams Hospitality Architecture",
+  "license": "ISC"
+}
