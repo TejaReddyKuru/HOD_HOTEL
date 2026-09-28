@@ -99,7 +99,7 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // 9. Start Server
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
   console.log(`\n==================================================`);
   console.log(`✨ HOUSE OF DREAMS HOTEL MANAGEMENT BACKEND ACTIVE`);
   console.log(`🏨 Tagline: "Stay. Relax. Dream."`);
@@ -107,6 +107,14 @@ const server = app.listen(PORT, () => {
   console.log(`🌐 Base URL: http://localhost:${PORT}/api`);
   console.log(`🛡️ Desk Payment Only - No Online Gateway`);
   console.log(`==================================================\n`);
+
+  // Pre-warm database connection pool
+  try {
+    await prisma.$connect();
+    console.log('⚡ Prisma connected to Neon PostgreSQL pool');
+  } catch (err) {
+    console.error('Failed to pre-connect Prisma:', err);
+  }
 });
 
 // Graceful shutdown

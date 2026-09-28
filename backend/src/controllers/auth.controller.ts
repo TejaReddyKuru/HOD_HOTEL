@@ -50,7 +50,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       name: newUser.name,
     });
 
-    await createAuditLog({
+    createAuditLog({
       userId: newUser.id,
       userName: newUser.name,
       role: 'CUSTOMER',
@@ -59,7 +59,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       entityId: newUser.id,
       details: `Customer registered account: ${newUser.email}`,
       ipAddress: req.ip,
-    });
+    }).catch((err) => console.error('Registration audit log error:', err));
 
     res.status(201).json({
       success: true,
@@ -116,7 +116,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       name: user.name,
     });
 
-    await createAuditLog({
+    // Non-blocking background audit log to eliminate login response delay
+    createAuditLog({
       userId: user.id,
       userName: user.name,
       role: user.role,
@@ -126,7 +127,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       branchId: user.branchId || undefined,
       details: `${user.role} logged in: ${user.email}`,
       ipAddress: req.ip,
-    });
+    }).catch((err) => console.error('Background audit log error:', err));
 
     res.json({
       success: true,
